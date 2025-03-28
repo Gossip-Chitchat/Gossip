@@ -1,0 +1,92 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+## Git Commit Message Rules (Cursor-Friendly Format)
+
+### Format
+
+- Use the following format for commit messages:  
+  `<type>(optional-scope): <short summary>`
+- Do not include a period at the end of the summary.
+- Use present tense (e.g., "Add", "Fix", not "Added" or "Fixed").
+- Keep the summary within 72 characters.
+- You may include an optional body and footer, separated by blank lines.
+
+---
+
+### Allowed `type` Values
+
+Use one of the following values as the commit type:
+
+- `feat`: A new feature
+- `fix`: A bug fix
+- `docs`: Documentation-only changes (e.g., README, comments)
+- `style`: Code formatting changes (e.g., whitespace, missing semicolons)
+- `refactor`: Code changes that neither fix bugs nor add features
+- `perf`: Performance improvements
+- `test`: Adding or updating tests
+- `build`: Changes related to the build system or packaging (e.g., Tauri configs)
+- `ci`: Changes to CI configuration (e.g., GitHub Actions)
+- `chore`: Miscellaneous changes (e.g., renaming, file moves, non-code updates)
+- `revert`: Revert a previous commit
+
+---
+
+### Optional `scope`
+
+- You may add a scope in parentheses to indicate which part of the project is affected.
+- Examples:  
+  - `icons`  
+  - `tauri`  
+  - `ios`  
+  - `windows`  
+  - `macos`  
+  - `ui`  
+  - `chat`  
+  - `hotkey`  
+  - `readme`
+
+---
+
+### Good Commit Message Examples
+
+```bash
+feat(chat): support message broadcasting with zero persistence
+
+fix(ui): prevent crash when switching themes too quickly
+
+docs(readme): add installation guide for Windows
+
+chore(icons): replace app icon with new cow design
+
+build(tauri): enable cross-platform packaging for Linux
+
+style(chat): fix indentation and spacing in message handler
+
+refactor(chat): simplify WebSocket client creation
+
+test(hotkey): add test case for boss-alert shortcut trigger
+```
+
+---
+
+### Bad Commit Message Examples (Do Not Use)
+
+- `update code`
+- `fix bug`
+- `change stuff`
+- `final version`
+- `add new icon.png`
+
+---
+
+### Additional Guidelines
+
+- One purpose per commit: avoid mixing multiple types (e.g., `feat` + `fix`) in one commit.
+- Always use present tense in the summary.
+- If the commit introduces breaking changes, include a footer line:  
+  `BREAKING CHANGE: <description>`  
+- Keep commits focused and scoped to a single responsibility.
