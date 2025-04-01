@@ -3,9 +3,11 @@ use crate::domain::models::chat::ChatRoom;
 
 /// Get a list of all chatrooms
 #[tauri::command]   
-pub fn get_chatroom_list() -> Vec<ChatRoom> {
-    vec![]
-}   
+pub fn get_chatroom_list() -> Result<Vec<ChatRoom>, String> {
+    // TODO: Implement fetching chatrooms from a data source
+    // For now, return an empty vector
+    Ok(vec![])
+}
 
 /// Get a chatroom by id
 #[tauri::command]
