@@ -5,14 +5,12 @@ use chrono::{DateTime, Utc};
 pub struct ChatRoom {
     pub is_owner: bool,
     pub id: String,
-    pub name: String,
-    pub description: String,
     pub created_at: DateTime<Utc>,
 }
 
 impl ChatRoom {
-    pub fn new(is_owner: bool, id: String, name: String, description: String) -> Self {
-        Self { is_owner, id, name, description, created_at: Utc::now() }
+    pub fn new(is_owner: bool, id: String) -> Self {
+        Self { is_owner, id, created_at: Utc::now() }
     }
 }
 

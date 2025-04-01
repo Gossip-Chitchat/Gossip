@@ -86,6 +86,7 @@ async fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::plugins::get_plugins_list_from_server,
             commands::plugins::get_plugin_from_server,
+            commands::chatroom::create::create_chatroom,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

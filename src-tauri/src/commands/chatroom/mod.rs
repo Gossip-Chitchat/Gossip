@@ -1,5 +1,6 @@
 #![allow(unused)]
 use crate::domain::models::chat::ChatRoom;
+pub mod create;
 
 /// Get a list of all chatrooms
 #[tauri::command]   
@@ -12,14 +13,11 @@ pub fn get_chatroom_list() -> Result<Vec<ChatRoom>, String> {
 /// Get a chatroom by id
 #[tauri::command]
 pub fn get_chatroom(id: String) -> ChatRoom {
-    ChatRoom::new(false, id, "".to_string(), "".to_string())
+    let chatroom = ChatRoom::new(false, id);
+    chatroom
 }
 
-/// Create a new chatroom
-#[tauri::command]
-pub fn create_chatroom(name: String, description: String) -> ChatRoom {
-    ChatRoom::new(false, "".to_string(), name, description)
-}
+
 
 /// Delete a chatroom
 #[tauri::command]

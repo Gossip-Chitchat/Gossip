@@ -1,21 +1,20 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, LogIn, Copy, Check } from 'lucide-react';
 import AnimatedElement from '@/components/ui-elements/AnimatedElement';
+import { invoke } from '@tauri-apps/api/core';
+import { toast } from 'sonner';
+
+interface RoomInfo {
+  id: string;
+  link: string;
+}
 
 const AppHome = () => {
   const navigate = useNavigate();
   const [roomLink, setRoomLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [joinLink, setJoinLink] = useState('');
-  
-  // Generate a fake room link for demonstration
-  const generateRoomLink = () => {
-    const randomId = Math.random().toString(36).substring(2, 10);
-    const link = `gossip://chat/${randomId}`;
-    setRoomLink(link);
-  };
   
   const copyToClipboard = () => {
     navigator.clipboard.writeText(roomLink);
@@ -26,6 +25,22 @@ const AppHome = () => {
   const joinRoom = () => {
     // In a real app, validate the link first
     navigate('/app/chat', { state: { roomLink: joinLink } });
+  };
+
+  const handleCreateRoom = async () => {
+    try {
+      // 1. 調用 Tauri 命令並獲取房間資訊
+      const roomInfo = await invoke<RoomInfo>("create_chatroom", {});
+      
+      // 2. 顯示房間連結
+      setRoomLink(roomInfo.id);
+      
+      // 3. 顯示成功提示
+      toast.success("聊天室建立成功！");
+    } catch (error) {
+      // 4. 錯誤處理
+      toast.error("建立聊天室失敗：" + error.message);
+    }
   };
 
   return (
@@ -69,7 +84,7 @@ const AppHome = () => {
                   </div>
                 ) : (
                   <button
-                    onClick={generateRoomLink}
+                    onClick={handleCreateRoom}
                     className="w-full py-3 px-4 rounded-lg bg-black text-white font-medium hover:bg-black/90 transition-all flex items-center justify-center gap-2"
                   >
                     <PlusCircle size={18} />
