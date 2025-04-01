@@ -5,11 +5,13 @@ mod commands;
 mod init;
 
 use init::init_state;
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web_actors::ws;
+use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{self, Sender, Receiver};
 use tauri::{Emitter, Manager}; // for window access
 // use tokio::sync::Mutex; // 如果你想要在多處共享就需要考慮 thread-safe
-
+use actix::prelude::*;
 
 // 這裡為了示範，假設我們會從 GET Query 裡面取一個 message
 #[derive(Debug, serde::Deserialize)]
@@ -21,7 +23,7 @@ async fn receive_message_handler(
     // 把 Sender 放進 App 資料
     tx: web::Data<Sender<String>>,
     query: web::Query<MessageQuery>,
-) -> impl Responder {
+) -> impl actix_web::Responder {
     let message = query.into_inner().message;
     println!("Actix 收到 message: {}", message);
 
@@ -33,36 +35,85 @@ async fn receive_message_handler(
     HttpResponse::Ok().body("message received")
 }
 
+// 定義 WebSocket 訊息結構
+#[derive(Debug, Serialize, Deserialize)]
+struct WsMessage {
+    message_type: String,
+    content: String,
+    sender: String,
+}
+
+// WebSocket Handler
+struct ChatWebSocket {
+    tx: Sender<String>,
+}
+
+impl Actor for ChatWebSocket {
+    type Context = ws::WebsocketContext<Self>;
+}
+
+// 處理 WebSocket 訊息
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatWebSocket {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+        match msg {
+            Ok(ws::Message::Text(text)) => {
+                // 解析接收到的 JSON 訊息
+                if let Ok(ws_message) = serde_json::from_str::<WsMessage>(&text) {
+                    println!("WebSocket received: {:?}", ws_message);
+                    
+                    // 將訊息轉發到 Tauri 主線程
+                    if let Err(e) = self.tx.send(text.to_string()) {
+                        eprintln!("Failed to send to Tauri thread: {}", e);
+                    }
+                }
+            }
+            Ok(ws::Message::Ping(msg)) => {
+                ctx.pong(&msg);
+            }
+            Ok(ws::Message::Close(reason)) => {
+                ctx.close(reason);
+                ctx.stop();
+            }
+            _ => (),
+        }
+    }
+}
+
+// WebSocket 連接處理函數
+async fn ws_index(
+    req: HttpRequest,
+    stream: web::Payload,
+    tx: web::Data<Sender<String>>,
+) -> Result<HttpResponse, Error> {
+    let ws = ChatWebSocket {
+        tx: tx.get_ref().clone(),
+    };
+    ws::start(ws, &req, stream)
+}
+
 #[tokio::main]
 async fn main() {
-    
-    
     let (tx, rx): (Sender<String>, Receiver<String>) = mpsc::channel();
 
-    // 啟動一個獨立的 task，跑 Actix-Web 伺服器
+    // 啟動 WebSocket 服務器
     tokio::spawn(async move {
-        // 這裡簡單監聽在 127.0.0.1:8080
-        // /receive-message?message=Hello%20from%20Actix
         HttpServer::new(move || {
             App::new()
-                // 把 sender 加到 Actix 的共享資料
                 .app_data(web::Data::new(tx.clone()))
-                .route("/receive-message", web::get().to(receive_message_handler))
+                .route("/ws", web::get().to(ws_index))
         })
         .bind(("127.0.0.1", 8080))
         .expect("Cannot bind to port 8080")
         .run()
         .await
-        .expect("Actix-Web Server crashed");
+        .expect("WebSocket server crashed");
     });
-
-
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            
             let main_window = app.get_webview_window("main").unwrap();
+            
             #[cfg(debug_assertions)]
             {
                 // main_window.open_devtools();
@@ -71,13 +122,12 @@ async fn main() {
             let app_state = init_state();
             app.manage(app_state);
 
-
-            // 開一個 thread 專門負責接收 rx，並把內容 emit 給前端
+            // 接收 WebSocket 訊息並轉發到前端
             std::thread::spawn(move || {
                 while let Ok(received_msg) = rx.recv() {
-                    println!("Tauri 收到來自 Actix 的 message: {}", &received_msg);
-                    // 把 message 透過 emit 傳給前端
-                    let _ = main_window.emit("receive-message", received_msg);
+                    println!("Tauri 通過 channel 收到 WebSocket 訊息: {}", &received_msg);
+                    println!("準備送給前端: {:?}", main_window);
+                    let _ = main_window.emit("chat-message", received_msg);
                 }
             });
 
