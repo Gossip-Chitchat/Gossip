@@ -8,13 +8,31 @@ import AppLayout from "./layouts/AppLayout";
 import AppHome from "./pages/AppHome";
 import ChatRoom from "./pages/ChatRoom";
 import AppSettings from "./pages/AppSettings";
+import { useEffect } from "react";
+import { listen } from "@tauri-apps/api/event";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <TooltipProvider>
+const App = function() {
+  useEffect(() => {
+    // 監聽後端送來的 "receive-message" 事件
+    const unlisten = listen<string>("receive-message", (event) => {
+      console.log("前端收到事件:", event.payload);
+      // 這邊就可以更新 UI 或做其他邏輯
+      alert("前端收到: " + event.payload);
+    });
+
+    // 解除監聽
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, []);
+
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -30,8 +48,9 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

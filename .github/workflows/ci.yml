@@ -56,37 +56,3 @@ jobs:
         with:
           name: build-files
           path: dist/
-
-  docker:
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: build-files
-          path: dist/
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: |
-            your-dockerhub-username/gossip:latest
-            your-dockerhub-username/gossip:${{ github.sha }}
-          cache-from: type=registry,ref=your-dockerhub-username/gossip:buildcache
-          cache-to: type=registry,ref=your-dockerhub-username/gossip:buildcache,mode=max
