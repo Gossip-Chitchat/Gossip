@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Message, ThemeType } from '@/types/theme-plugins';
 
@@ -11,6 +10,7 @@ export function useChatRoom({ isHost }: UseChatRoomProps) {
   const [newMessage, setNewMessage] = useState('');
   const [currentTheme, setCurrentTheme] = useState<ThemeType>('default');
   const [bossAlert, setBossAlert] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -23,51 +23,54 @@ export function useChatRoom({ isHost }: UseChatRoomProps) {
     window.dispatchEvent(hideSidebarEvent);
   };
   
-  // Add some initial messages for demonstration
+  // 初始化 WebSocket 連接
   useEffect(() => {
-    const initialMessages: Message[] = [
-      {
-        id: '1',
-        content: isHost ? '你已創建聊天室，房間連結已複製到剪貼簿' : '你已加入聊天室',
-        sender: 'System',
-        timestamp: new Date(),
-        isSystem: true
-      },
-      {
-        id: '2',
-        content: '大家好！有人在嗎？',
-        sender: '王小明',
-        timestamp: new Date(Date.now() - 15 * 60000)
-      },
-      {
-        id: '3',
-        content: '嗨！我剛剛加入',
-        sender: '李小華',
-        timestamp: new Date(Date.now() - 10 * 60000)
-      },
-      {
-        id: '4',
-        content: '午餐吃什麼好呢？',
-        sender: '張小美',
-        timestamp: new Date(Date.now() - 5 * 60000)
+    wsRef.current = new WebSocket('ws://127.0.0.1:8080/ws');
+
+    wsRef.current.onopen = () => {
+      console.log('WebSocket connected');
+      // 發送加入聊天室訊息
+      if (wsRef.current) {
+        wsRef.current.send(JSON.stringify({
+          message_type: 'join',
+          content: isHost ? '創建了聊天室' : '加入了聊天室',
+          sender: 'System'
+        }));
       }
-    ];
-    
-    setMessages(initialMessages);
+    };
+
+    wsRef.current.onmessage = (event) => {
+      const wsMessage = JSON.parse(event.data);
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        content: wsMessage.content,
+        sender: wsMessage.sender,
+        timestamp: new Date(),
+        isSystem: wsMessage.sender === 'System'
+      };
+      setMessages(prev => [...prev, newMessage]);
+    };
+
+    wsRef.current.onclose = () => {
+      console.log('WebSocket disconnected');
+    };
+
+    return () => {
+      wsRef.current?.close();
+    };
   }, [isHost]);
   
-  // Send message function
+  // 發送訊息
   const sendMessage = () => {
-    if (!newMessage.trim()) return;
-    
-    const message: Message = {
-      id: Date.now().toString(),
+    if (!newMessage.trim() || !wsRef.current) return;
+
+    const message = {
+      message_type: 'chat',
       content: newMessage,
-      sender: 'You',
-      timestamp: new Date()
+      sender: 'You'
     };
-    
-    setMessages([...messages, message]);
+
+    wsRef.current.send(JSON.stringify(message));
     setNewMessage('');
   };
   
