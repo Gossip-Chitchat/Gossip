@@ -19,8 +19,6 @@ impl ChatroomsRepository {
 impl ChatroomRepository for ChatroomsRepository {
     fn create_room(&mut self, id: String) -> Result<ChatRoom, Error> {
         println!("create_room");
-
-        let id = "aaaaa".to_string();
         let chatroom = ChatRoom::new(true, id.clone());
 
         if self.chatrooms.contains_key(&id) {
