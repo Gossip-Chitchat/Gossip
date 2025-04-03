@@ -24,8 +24,8 @@ async fn main() {
                 .app_data(web::Data::new(tx.clone()))
                 .route("/ws", web::get().to(ws_index))
         })
-        .bind(("127.0.0.1", 8080))
-        .expect("Cannot bind to port 8080")
+        .bind(("127.0.0.1", 9123))
+        .expect("Cannot bind to port 9123")
         .run()
         .await
         .expect("WebSocket server crashed");

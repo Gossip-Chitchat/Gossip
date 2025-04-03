@@ -11,21 +11,21 @@ export function useChatRoom({ isHost }: UseChatRoomProps) {
   const [currentTheme, setCurrentTheme] = useState<ThemeType>('default');
   const [bossAlert, setBossAlert] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   // Function to automatically hide sidebar when theme changes
   const handleThemeChange = (newTheme: ThemeType) => {
     setCurrentTheme(newTheme);
-    
+
     // Dispatch a custom event to notify the sidebar to hide
     const hideSidebarEvent = new CustomEvent('hideSidebar');
     window.dispatchEvent(hideSidebarEvent);
   };
-  
+
   // 初始化 WebSocket 連接
   useEffect(() => {
-    wsRef.current = new WebSocket('ws://127.0.0.1:8080/ws');
+    wsRef.current = new WebSocket('ws://127.0.0.1:9123/ws');
 
     wsRef.current.onopen = () => {
       console.log('WebSocket connected');
@@ -59,7 +59,7 @@ export function useChatRoom({ isHost }: UseChatRoomProps) {
       wsRef.current?.close();
     };
   }, [isHost]);
-  
+
   // 發送訊息
   const sendMessage = () => {
     if (!newMessage.trim() || !wsRef.current) return;
@@ -73,7 +73,7 @@ export function useChatRoom({ isHost }: UseChatRoomProps) {
     wsRef.current.send(JSON.stringify(message));
     setNewMessage('');
   };
-  
+
   // Handle enter key press
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -81,7 +81,7 @@ export function useChatRoom({ isHost }: UseChatRoomProps) {
       sendMessage();
     }
   };
-  
+
   // Trigger boss alert
   const triggerBossAlert = () => {
     const alertMessage: Message = {
@@ -91,17 +91,17 @@ export function useChatRoom({ isHost }: UseChatRoomProps) {
       timestamp: new Date(),
       isSystem: true
     };
-    
+
     setMessages([...messages, alertMessage]);
     setBossAlert(true);
     handleThemeChange('excel');
-    
+
     // Reset alert after 5 seconds
     setTimeout(() => {
       setBossAlert(false);
     }, 5000);
   };
-  
+
   // Set keyboard shortcut for boss alert
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -110,21 +110,21 @@ export function useChatRoom({ isHost }: UseChatRoomProps) {
         triggerBossAlert();
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [messages]);
-  
+
   // Format timestamp
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
-  
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-  
+
   return {
     messages,
     newMessage,
