@@ -1,23 +1,22 @@
+use crate::domain::ports::chatroom::CreateRoomPort;
+use crate::domain::repository::chatroom::ChatroomRepository;
 use std::sync::Arc;
-
-use crate::domain::models::chat::ChatRoom;
-use crate::domain::models::plugin::Plugin;
-use crate::application::usecase::chatroom::create::CreateRoomUsecase;
 use std::sync::Mutex;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct AppState {
-    pub chatrooms: Vec<ChatRoom>,
-    pub plugins: Vec<Plugin>,
-    pub create_room_usecase: Arc<Mutex<CreateRoomUsecase>>,
+    pub create_room_usecase: Arc<Mutex<dyn CreateRoomPort>>,
+    pub chatrooms_repository: Arc<Mutex<dyn ChatroomRepository>>,
 }
 
 impl AppState {
-    pub fn new(create_room_usecase: CreateRoomUsecase) -> Self {
-        Self { 
-            chatrooms: vec![], 
-            plugins: vec![], 
-            create_room_usecase: Arc::new(Mutex::new(create_room_usecase)),
+    pub fn new(
+        create_room_usecase: Arc<Mutex<dyn CreateRoomPort>>,
+        chatrooms_repository: Arc<Mutex<dyn ChatroomRepository>>,
+    ) -> Self {
+        Self {
+            create_room_usecase,
+            chatrooms_repository,
         }
     }
 }

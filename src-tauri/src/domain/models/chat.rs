@@ -1,7 +1,7 @@
 #![allow(unused)]
 use chrono::{DateTime, Utc};
-use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ChatRoom {
@@ -12,7 +12,11 @@ pub struct ChatRoom {
 
 impl ChatRoom {
     pub fn new(is_owner: bool, id: String) -> Self {
-        Self { is_owner, id, created_at: Utc::now() }
+        Self {
+            is_owner,
+            id,
+            created_at: Utc::now(),
+        }
     }
 }
 
@@ -26,7 +30,12 @@ pub struct ChatMessage {
 
 impl ChatMessage {
     pub fn new(id: String, content: String, sender: String) -> Self {
-        Self { id, content, created_at: Utc::now(), sender}
+        Self {
+            id,
+            content,
+            created_at: Utc::now(),
+            sender,
+        }
     }
 }
 
@@ -39,8 +48,8 @@ pub struct WebSocketConnection {
 
 impl WebSocketConnection {
     pub fn new(connection_id: String, user_id: String) -> Self {
-        Self { 
-            connection_id, 
+        Self {
+            connection_id,
             user_id,
         }
     }
@@ -79,7 +88,11 @@ impl ChatRoomRepository {
         }
     }
 
-    pub fn add_connection(&self, room_id: &str, connection: WebSocketConnection) -> Result<(), String> {
+    pub fn add_connection(
+        &self,
+        room_id: &str,
+        connection: WebSocketConnection,
+    ) -> Result<(), String> {
         if let Ok(mut connections) = self.connections.lock() {
             connections
                 .entry(room_id.to_string())
@@ -112,4 +125,3 @@ impl ChatRoomRepository {
         }
     }
 }
-    
