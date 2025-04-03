@@ -22,7 +22,7 @@ export function useRoomCreation() {
             toast.success("聊天室建立成功！");
         } catch (error) {
             // 4. 錯誤處理
-            toast.error("建立聊天室失敗：" + error.message);
+            toast.error("建立聊天室失敗：" + error);
         }
     };
 

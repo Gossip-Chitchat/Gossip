@@ -17,19 +17,28 @@ impl ChatroomsRepository {
 }
 
 impl ChatroomRepository for ChatroomsRepository {
-    fn create_room(&self) -> Result<(), Error> {
+    fn create_room(&mut self, id: String) -> Result<ChatRoom, Error> {
         println!("create_room");
-        Ok(())
+
+        let id = "aaaaa".to_string();
+        let chatroom = ChatRoom::new(true, id.clone());
+
+        if self.chatrooms.contains_key(&id) {
+            return Err(anyhow::anyhow!("Chatroom already exists"));
+        }
+
+        self.chatrooms.insert(id.clone(), chatroom.clone());
+        Ok(chatroom)
     }
 
-    fn get_room(&self) -> Result<(), Error> {
+    fn get_room(&self) -> Result<ChatRoom, Error> {
         println!("get_room");
-        Ok(())
+        Ok(ChatRoom::new(true, "".to_string()))
     }
 
-    fn get_room_list(&self) -> Result<(), Error> {
+    fn get_room_list(&self) -> Result<Vec<ChatRoom>, Error> {
         println!("get_room_list");
-        Ok(())
+        Ok(vec![])
     }
 
     fn exit_room(&self) -> Result<(), Error> {
