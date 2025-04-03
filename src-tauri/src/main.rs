@@ -6,7 +6,7 @@ mod domain;
 mod init;
 
 use init::init_state;
-use application::infrastructure::server::route::{ws_index, WsMessage};
+use application::infrastructure::server::route::ws_index;
 use actix_web::{web, App, HttpServer};
 use std::sync::mpsc::{self, Sender, Receiver};
 use tauri::{Emitter, Manager}; // for window access
