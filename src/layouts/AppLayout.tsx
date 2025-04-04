@@ -202,19 +202,6 @@ const AppLayout = () => {
               <ul className="space-y-2">
                 <li>
                   <button 
-                    onClick={() => navigate('/app')}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors duration-300 ease-in-out",
-                      sidebarState === 'narrow' && "justify-center px-1"
-                    )}
-                    title={sidebarState === 'narrow' ? "首頁" : undefined}
-                  >
-                    <Home size={18} />
-                    {sidebarState === 'expanded' && <span className="transition-opacity duration-300 ease-in-out">首頁</span>}
-                  </button>
-                </li>
-                <li>
-                  <button 
                     onClick={() => navigate('/app/chat')}
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors duration-300 ease-in-out",
