@@ -3,8 +3,8 @@
 pub mod chat;
 pub mod notification;
 
-use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CloudEvent<T> {
@@ -24,7 +24,6 @@ pub struct CloudEvent<T> {
     /// 事件主題
     pub subject: String,
 
-    
     // Optional fields
     /// 事件資料內容類型
     pub datacontenttype: Option<String>,
@@ -33,12 +32,7 @@ pub struct CloudEvent<T> {
 }
 
 impl<T> CloudEvent<T> {
-    pub fn new(
-        id: String,
-        source: String,
-        type_: String,
-        data: T,
-    ) -> Self {
+    pub fn new(id: String, source: String, type_: String, data: T) -> Self {
         Self {
             id,
             source,
