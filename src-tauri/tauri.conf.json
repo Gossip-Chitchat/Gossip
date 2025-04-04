@@ -14,8 +14,10 @@
       {
         "title": "gossip",
         "width": 1000,
-        "height": 700,
-        "center": true
+        "height": 800,
+        "center": true,
+        "decorations": false,
+        "dragDropEnabled": false
       }
     ],
     "security": {
