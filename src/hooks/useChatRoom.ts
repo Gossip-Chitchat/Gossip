@@ -50,10 +50,11 @@ export function useChatRoom({ isHost }: UseChatRoomProps) {
       };
       setMessages(prev => [...prev, newMessage]);
     };
-
-    wsRef.current.onclose = () => {
-      console.log('WebSocket disconnected');
+    wsRef.current.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      // Implement reconnection strategy here
     };
+
 
     return () => {
       wsRef.current?.close();
