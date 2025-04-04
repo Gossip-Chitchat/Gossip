@@ -37,11 +37,11 @@ const App = function() {
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* 獨立頁面 */}
             <Route path="/" element={<AppHome />} />
             
-            {/* App Routes */}
+            {/* 應用內頁面 */}
             <Route path="/app" element={<AppLayout />}>
-              <Route index element={<AppHome />} />
               <Route path="chat" element={<ChatRoom />} />
               <Route path="settings" element={<AppSettings />} />
             </Route>
