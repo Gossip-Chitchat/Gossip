@@ -44,3 +44,30 @@ impl ChatroomRepository for ChatroomsRepository {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_room_stores_room_owned_by_creator() {
+        let mut repo = ChatroomsRepository::new();
+
+        let room = repo.create_room("room-1".to_string()).unwrap();
+
+        assert!(room.is_owner);
+        assert_eq!(room.id, "room-1");
+        assert!(repo.chatrooms.contains_key("room-1"));
+    }
+
+    #[test]
+    fn create_room_rejects_duplicate_id() {
+        let mut repo = ChatroomsRepository::new();
+        repo.create_room("room-1".to_string()).unwrap();
+
+        let err = repo.create_room("room-1".to_string()).unwrap_err();
+
+        assert_eq!(err.to_string(), "Chatroom already exists");
+        assert_eq!(repo.chatrooms.len(), 1);
+    }
+}

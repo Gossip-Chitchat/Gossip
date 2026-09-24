@@ -77,3 +77,33 @@ impl ChatroomService for ChatroomServiceImpl {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::application::repository::chatrooms::ChatroomsRepository;
+
+    #[test]
+    fn create_room_assigns_uuid_v7_and_saves_it() {
+        let repo = Arc::new(Mutex::new(ChatroomsRepository::new()));
+        let service = ChatroomServiceImpl::new(repo.clone());
+
+        let room = service.create_room().unwrap();
+
+        let id = uuid::Uuid::parse_str(&room.id).unwrap();
+        assert_eq!(id.get_version_num(), 7);
+        assert!(repo.lock().unwrap().chatrooms.contains_key(&room.id));
+    }
+
+    #[test]
+    fn create_room_generates_distinct_ids() {
+        let repo = Arc::new(Mutex::new(ChatroomsRepository::new()));
+        let service = ChatroomServiceImpl::new(repo.clone());
+
+        let first = service.create_room().unwrap();
+        let second = service.create_room().unwrap();
+
+        assert_ne!(first.id, second.id);
+        assert_eq!(repo.lock().unwrap().chatrooms.len(), 2);
+    }
+}
