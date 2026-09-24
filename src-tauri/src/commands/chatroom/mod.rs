@@ -13,8 +13,7 @@ pub fn get_chatroom_list() -> Result<Vec<ChatRoom>, String> {
 /// Get a chatroom by id
 #[tauri::command]
 pub fn get_chatroom(id: String) -> ChatRoom {
-    let chatroom = ChatRoom::new(false, id);
-    chatroom
+    ChatRoom::new(false, id)
 }
 
 /// Delete a chatroom

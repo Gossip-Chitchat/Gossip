@@ -6,6 +6,8 @@ use std::sync::Mutex;
 #[derive(Clone)]
 pub struct AppState {
     pub create_room_usecase: Arc<Mutex<dyn CreateRoomPort>>,
+    // Not read by any command yet.
+    #[allow(dead_code)]
     pub chatrooms_repository: Arc<Mutex<dyn ChatroomRepository>>,
 }
 

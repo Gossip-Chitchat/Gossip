@@ -1,7 +1,6 @@
 use actix::prelude::*;
 use actix_web::{web, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
-use bytes::Bytes;
 use rmp_serde::{Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::Sender;
@@ -53,7 +52,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatWebSocket {
 
                     // 將 JSON 轉換為 MessagePack
                     let mut buf = Vec::new();
-                    if let Ok(_) = ws_message.serialize(&mut Serializer::new(&mut buf)) {
+                    if ws_message.serialize(&mut Serializer::new(&mut buf)).is_ok() {
                         // 將轉換後的 MessagePack 數據發送到 Tauri 主線程
                         if let Err(e) = self.tx.send(buf) {
                             eprintln!("Failed to send msgpack to Tauri thread: {}", e);
