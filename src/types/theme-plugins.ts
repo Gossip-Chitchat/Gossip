@@ -22,7 +22,7 @@ export interface ThemePlugin {
   messagesComponent: React.FC<MessagesProps>;
   inputComponent: React.FC<InputProps>;
   wrapperClassName: (isBossAlert: boolean) => string;
-  additionalComponents?: React.FC<any>[];
+  additionalComponents?: React.FC<{ newMessage: string }>[];
 }
 
 // 各組件道具類型

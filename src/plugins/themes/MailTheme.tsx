@@ -3,7 +3,7 @@ import { Send, MailOpen, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import AnimatedElement from '@/components/ui-elements/AnimatedElement';
-import { ThemePlugin, HeaderProps, MessagesProps, InputProps } from '@/types/theme-plugins';
+import { ThemePlugin, ThemeType, HeaderProps, MessagesProps, InputProps } from '@/types/theme-plugins';
 
 const MailHeader: React.FC<HeaderProps> = ({ currentTheme, triggerBossAlert, handleThemeChange }) => {
   return (
@@ -21,7 +21,7 @@ const MailHeader: React.FC<HeaderProps> = ({ currentTheme, triggerBossAlert, han
         
         <select
           value={currentTheme}
-          onChange={(e) => handleThemeChange(e.target.value as any)}
+          onChange={(e) => handleThemeChange(e.target.value as ThemeType)}
           className="bg-blue-50 text-blue-800 border border-blue-200 p-2 rounded-lg text-sm"
         >
           <option value="default">預設主題</option>

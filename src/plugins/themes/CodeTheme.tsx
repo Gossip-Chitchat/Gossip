@@ -3,7 +3,7 @@ import { Send, FileCode2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import AnimatedElement from '@/components/ui-elements/AnimatedElement';
-import { ThemePlugin, HeaderProps, MessagesProps, InputProps } from '@/types/theme-plugins';
+import { ThemePlugin, ThemeType, HeaderProps, MessagesProps, InputProps } from '@/types/theme-plugins';
 
 const CodeHeader: React.FC<HeaderProps> = ({ currentTheme, triggerBossAlert, handleThemeChange }) => {
   return (
@@ -21,7 +21,7 @@ const CodeHeader: React.FC<HeaderProps> = ({ currentTheme, triggerBossAlert, han
         
         <select
           value={currentTheme}
-          onChange={(e) => handleThemeChange(e.target.value as any)}
+          onChange={(e) => handleThemeChange(e.target.value as ThemeType)}
           className="bg-gray-700 text-white border border-gray-600 p-2 rounded-lg text-sm"
         >
           <option value="default">預設主題</option>

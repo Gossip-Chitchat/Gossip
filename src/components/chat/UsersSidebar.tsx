@@ -1,12 +1,12 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { ThemeType } from '@/types/theme-plugins';
+import { ThemePlugin, ThemeType } from '@/types/theme-plugins';
 
 interface UsersSidebarProps {
   users: { id: string; name: string }[];
   currentTheme: ThemeType;
-  activeTheme: any;
+  activeTheme: ThemePlugin;
 }
 
 const UsersSidebar = ({ users, currentTheme, activeTheme }: UsersSidebarProps) => {

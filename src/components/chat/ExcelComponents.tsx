@@ -1,10 +1,10 @@
 
 import React from 'react';
-import { ThemeType } from '@/types/theme-plugins';
+import { ThemePlugin, ThemeType } from '@/types/theme-plugins';
 
 interface ExcelComponentsProps {
   currentTheme: ThemeType;
-  activeTheme: any;
+  activeTheme: ThemePlugin;
   newMessage: string;
 }
 
