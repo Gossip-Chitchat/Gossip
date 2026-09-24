@@ -12,7 +12,7 @@
 - **老闆警示**：快捷鍵（預設 `Ctrl+Shift+B`）向房內所有人廣播「老闆來了」，並自動切到安全主題。
 - **跨平台**：Windows / macOS / Linux 安裝檔。
 
-姊妹 repo：[`Gossip-Chitchat/Gossip-Landing`](https://github.com/Gossip-Chitchat/Gossip-Landing) 是對外的宣傳 landing page（Vite + React，Lovable 產生，push `main` 即部署到 S3/CloudFront，用 Mixpanel 追蹤）。**Landing 上寫的功能就是這個 app 的產品目標**，改動產品行為時要對照它。規劃與進度記在 Notion：<https://app.notion.com/p/henryliking/Gossip-1c52d7148c2580c28b50edb152f47a2d>。
+姊妹 repo：[`Gossip-Chitchat/Gossip-Landing`](https://github.com/Gossip-Chitchat/Gossip-Landing) 是對外的宣傳 landing page（Vite + React + shadcn/ui，push `main` 即部署到 S3/CloudFront，用 Mixpanel 追蹤）。**Landing 上寫的功能就是這個 app 的產品目標**，改動產品行為時要對照它。規劃與進度記在 Notion：<https://app.notion.com/p/henryliking/Gossip-1c52d7148c2580c28b50edb152f47a2d>。
 
 ## 目前狀態（重要）
 
@@ -31,25 +31,29 @@
 ## 常用指令
 
 ```bash
-npm ci                 # 安裝前端依賴（見下方 rollup 注意事項）
+npm ci                 # 安裝前端依賴（只用 npm；lockfile 含各平台原生套件）
 npm run dev            # 只跑前端 Vite（http://localhost:1420），Tauri API 呼叫會失敗
 npm run tauri dev      # 跑完整桌面 app（需要 Rust toolchain + 各平台 Tauri 系統依賴）
-npx vite build         # 只打包前端（目前唯一能過的 build 指令，見下）
-cd src-tauri && cargo check   # 檢查 Rust；Linux 需先裝 libwebkit2gtk-4.1-dev、libgtk-3-dev 等
+npm run lint           # ESLint（目前 0 error；剩下的 warning 是 shadcn 檔案的 fast-refresh 提示與 useChatRoom 的 hook 依賴）
+npm run type-check     # tsc -b（strict）
+npm test               # Vitest（jsdom），測試檔與原始碼放一起：*.test.ts(x)
+npm run build          # tsc -b && vite build，也是 tauri build 的 beforeBuildCommand
+
+cd src-tauri
+cargo fmt --check
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --locked
 ```
 
-`cargo check` 目前可通過（7 個 dead-code / unused warning）。`src-tauri/Cargo.lock` 被 `.gitignore` 排除，依賴版本不固定。
+- Linux 編 Rust 需先裝 `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev`（CI 同樣這樣裝）。
+- `src-tauri/Cargo.lock` 有進版控；Rust 的 `tauri` crate 與 npm 的 `@tauri-apps/api` / `@tauri-apps/cli` 要維持同一個 minor 版本（目前 2.11），升級時兩邊一起動。
+- CI（`.github/workflows/ci.yml`）對 `main` 的 push 與 PR 執行兩個 job：frontend（lint → test → build）與 rust（fmt → clippy → test）。送 PR 前在本機跑過上面這些指令。
 
-以下 package script **目前是壞的**，修之前別依賴它們的結果：
+### 測試慣例
 
-- `npm run build`（= `tsc && vite build`，也是 `tauri build` 的 `beforeBuildCommand`）：`tsconfig.json` 同時 `include: ["src"]` 又 `references` 到 `tsconfig.app.json`（`composite: true`），`tsc` 報 TS6305 / TS5097 而失敗 → **`tauri build` 會跟著失敗**。
-- `npm run type-check`：同上原因失敗。
-- `npm run lint`：ESLint 9 flat config 不支援 `--ext`，直接報錯；改跑 `npx eslint .` 目前有 12 errors / 8 warnings（主要是 `no-explicit-any`、`tailwind.config.ts` 的 `require()`）。
-- `npm test`：Vitest 已裝但**沒有任何測試檔**，會以 exit 1 結束。
-- 在 Linux 用 `npm ci` 後 Vite/Vitest 可能報 `Cannot find module @rollup/rollup-linux-x64-gnu`（lockfile 在 macOS 產生的 npm optional deps 問題）。暫時解法：`npm i --no-save @rollup/rollup-linux-x64-gnu`。
-- repo 同時有 `package-lock.json` 與 `bun.lockb`；以 npm 為準（CI 與 README 都用 npm）。
-
-CI（`.github/workflows/ci.yml`）目前只有 checkout + setup-node，**沒有任何檢查步驟**，綠燈不代表能 build。
+- 前端：Vitest + Testing Library，setup 在 `src/test/setup.ts`（載入 jest-dom matcher）。要測呼叫 Tauri command 的程式碼時，用 `@tauri-apps/api/mocks` 的 `mockIPC` / `clearMocks` 模擬 IPC，不要直接 mock `invoke`。
+- 後端：單元測試寫在各檔案底部的 `#[cfg(test)] mod tests`；service / usecase 的相依以 trait 注入，測試時用簡單的 stub struct 實作 trait。
+- 多機 LAN 測試（Docker 模擬多台主機）的規劃見 Notion 頁面的「測試策略」段落；需要先把網路核心做成可以不開 GUI 執行。
 
 ## 架構
 
@@ -84,7 +88,8 @@ main.rs               啟動 actix-web（tokio::spawn）+ Tauri，並用 mpsc �
 - `domain/models/events/mod.rs` 已定義 CloudEvents 1.0 格式的 `CloudEvent<T>`，這是預定的事件信封（新訊息、新成員加入、老闆警示），但**目前沒有任何地方使用**。
 - 訊息序列化：後端偏好 MessagePack（`rmp-serde`；前端 `@msgpack/msgpack`），也接受 JSON text 並轉成 msgpack。
 - `domain/ports/user.rs`、`domain/ports/external_notifier_port.rs` 沒被 `mod.rs` 引入，所以不會編譯（後者引用了不存在的 `events::Event`）；啟用前要先修。
-- `src-tauri/src/lib.rs` 是空的（`Cargo.toml` 宣告了 `gossip_lib`，但實際邏輯都在 `main.rs`）。
+- `src-tauri/src/lib.rs` 是空的（`Cargo.toml` 宣告了 `gossip_lib`，但實際邏輯都在 `main.rs`），所以後端目前無法在不開 Tauri 視窗的情況下單獨執行或做整合測試。
+- 尚未接上任何 command 的 port / repository 方法用 `#[allow(dead_code)]` 標註保留；接上後記得拿掉標註。
 
 ### 目前的訊息資料流（實際行為）
 
@@ -103,7 +108,7 @@ ChatRoom UI ──JSON text──> ws://127.0.0.1:9123/ws ──> ChatWebSocket 
 5. **老闆警示只在本機**：不會廣播；快捷鍵寫死且只在視窗聚焦時有效（非 global shortcut）；設定頁的快捷鍵 / 主題 / 音效選項按「儲存」只會 `alert()`，沒有持久化。
 6. **成員是假資料**：`ChatRoom.tsx` 寫死 4 個使用者，送出者一律是 `'You'`，沒有暱稱機制。
 7. **Commands 多為 stub**：`get_chatroom`、`get_chatroom_list`、`delete_chatroom`、plugins 相關 command 回傳假值；`install_plugin` 未註冊。
-8. **文件漂移**：`docs/api/chatroom.md` 說 `create_chatroom` 接受 `name` / `description`，實際沒有參數，`ChatRoom` 也只有 `is_owner` / `id` / `created_at`；`docs/event-flow.md` 連到的 `overview.md`、`join-room.md` 等檔案不存在；`docs/events/create-room.md` 的範例程式碼與實作不同。README 提到的 Docker 並不存在，clone URL 仍是 `your-username` 佔位字。
+8. **文件漂移**：`docs/api/chatroom.md` 說 `create_chatroom` 接受 `name` / `description`，實際沒有參數，`ChatRoom` 也只有 `is_owner` / `id` / `created_at`；`docs/event-flow.md` 連到的 `overview.md`、`join-room.md` 等檔案不存在；`docs/events/create-room.md` 的範例程式碼與實作不同。
 9. **安全面**：WS 沒有任何驗證、未加密（`ws://`）、`tauri.conf.json` 的 `csp` 為 `null`；房間 ID 用 UUIDv7（含時間戳，可部分推測），若要當作邀請憑證應改用高熵隨機 token。
 10. **發佈**：沒有 release workflow，Landing 的「Windows / macOS / Linux 下載」按鈕都只連到 GitHub repo 首頁。
 

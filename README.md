@@ -22,32 +22,25 @@ Gossip 是一款專注於隱私的現代聊天應用，讓用戶能夠創建暫�
 
 ### 前置需求
 
-- Node.js (v18+)
-- npm (v9+)
+- Node.js 18 以上（CI 使用 22）與 npm
+- Rust stable toolchain
+- Tauri 的系統依賴（Linux 需 `libwebkit2gtk-4.1-dev` 等），請參考 [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/)
 
 ### 安裝步驟
 
 ```bash
 # 複製儲存庫
-git clone https://github.com/your-username/gossip.git
-cd gossip
+git clone https://github.com/Gossip-Chitchat/Gossip.git
+cd Gossip
 
 # 安裝依賴
-npm install
+npm ci
 
-# 啟動開發伺服器
-npm run dev
+# 啟動桌面應用（開發模式）
+npm run tauri dev
 ```
 
-### 使用 Docker
-
-```bash
-# 構建映像
-docker build -t gossip .
-
-# 執行容器
-docker run -p 1420:1420 gossip
-```
+只想調整介面時可以用 `npm run dev` 單獨啟動前端（http://localhost:1420），但呼叫 Tauri 後端的功能在瀏覽器中不會運作。
 
 ## 🛠️ 技術棧
 
@@ -55,28 +48,39 @@ docker run -p 1420:1420 gossip
 - **UI 元件**: shadcn/ui + Tailwind CSS
 - **路由**: React Router
 - **狀態管理**: React Query
-- **桌面應用**: Tauri (跨平台支持)
+- **桌面應用**: Tauri 2 (跨平台支持)
+- **後端**: Rust + actix-web（WebSocket）+ MessagePack
+- **測試**: Vitest + Testing Library、cargo test
 
 ## 💻 開發指南
 
 ### 專案結構
 
 ```
-src/
-├── assets/        # 靜態資源
-├── components/    # UI 元件
-├── layouts/       # 頁面佈局
+src/               # React 前端
+├── components/    # UI 元件（ui/ 為 shadcn/ui 產生）
 ├── hooks/         # 自定義 Hooks
+├── layouts/       # 頁面佈局
 ├── lib/           # 工具函數和庫
-└── pages/         # 頁面組件
+├── pages/         # 頁面組件
+├── plugins/       # 偽裝主題插件
+└── types/         # 共用型別
+src-tauri/         # Rust 後端（Tauri commands、WebSocket server）
+docs/              # API 與事件流程文件
 ```
 
 ### 可用的指令
 
-- `npm run dev` - 啟動開發伺服器
-- `npm run build` - 構建生產版本
-- `npm run preview` - 預覽生產構建
-- `npm run tauri` - 啟動 Tauri 桌面應用
+- `npm run dev` - 只啟動前端開發伺服器
+- `npm run tauri dev` - 啟動完整桌面應用
+- `npm run build` - 型別檢查並構建前端
+- `npm run tauri build` - 打包桌面應用安裝檔
+- `npm run lint` - ESLint 檢查
+- `npm run type-check` - TypeScript 型別檢查
+- `npm test` - 執行前端測試（`npm run test:watch` 為監看模式）
+- `cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` - 後端格式、靜態檢查與測試
+
+以上檢查都會在 CI（`.github/workflows/ci.yml`）中對 `main` 的 push 與 pull request 執行。
 
 ## 🤝 貢獻指南
 
@@ -102,7 +106,7 @@ Gossip 不收集用戶的個人識別資訊。聊天內容僅保留在參與者�
 
 如有任何問題或建議，請透過以下方式聯繫：
 
-- [開啟 Issue](https://github.com/your-username/gossip/issues)
+- [開啟 Issue](https://github.com/Gossip-Chitchat/Gossip/issues)
 - [發送郵件](mailto:support@gossip-chat.app)
 
 ---
