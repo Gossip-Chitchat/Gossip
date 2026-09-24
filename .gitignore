@@ -55,3 +55,6 @@ package-lock.json.bak
 src-tauri/target
 src-tauri/Cargo.lock
 src-tauri/WixTools
+
+# TypeScript
+*.tsbuildinfo

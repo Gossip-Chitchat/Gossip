@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc -b && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
     "lint": "eslint . --ext ts,tsx",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
     "icons": "tauri icon ./public/b84bf715-8ab2-4d71-aa8a-01d0be313bfb.png"
