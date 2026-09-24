@@ -120,6 +120,17 @@ ChatRoom UI ──JSON text──> ws://127.0.0.1:9123/ws ──> ChatWebSocket 
 - `docs/`：只描述**目前程式碼實際的行為**（command、通訊管道、功能流程）。改了行為就要同步改 `docs/`，不要把還沒做的設計寫進去。
 - Notion 的 Gossip 頁面與其下的 Product Design 頁面：目標設計、設計取捨與決策紀錄。功能實作完成後，再把對應內容搬進 `docs/`。
 
+## 已定案的設計方向（2026-09-24）
+
+細節與理由見 Notion 的 Product Design 頁面。實作 M1 之後的功能時照這些方向走，要偏離請先和作者確認。
+
+- **拓撲**：星狀（房主的 app 當 Hub，其他人連它）+ 有順序的繼任名單。分三期：M1 房主離線提示 +「由我重開房間」；M2 房主正常關閉時主動交接；之後以遞增 epoch 做當機自動接手。不做全網狀。
+- **連線**：專注區網。邀請連結帶多個候選 IP、訪客並行嘗試；port 被佔用改用隨機 port；連線失敗依錯誤類型（被拒 / 逾時 / 不同網段 / 憑證不符）給出原因。
+- **雲端中繼**：先不實作。只定義 Hub port，M1 只有 `LanHub` 一個 adapter；未來以 AWS 實作另一個 adapter。
+- **截圖**：Windows 與 macOS 都開視窗內容保護（Tauri `setContentProtected`，macOS 為盡力而為，需實機驗證），做成可開關；另做窺視模式（訊息預設模糊）與失焦自動隱藏。不宣稱「防截圖」。
+- **加密**：兩層都做——wss（房主產生自簽憑證，SHA-256 指紋寫進邀請連結供訪客釘選）＋應用層 E2EE（房間金鑰放在邀請連結 `#` 之後，永遠不送給 Hub）。只用 `rustls`、RustCrypto 等現成函式庫。
+- **識別與秘密分開**：`room_id` 繼續用 UUIDv7；加入憑證另用 CSPRNG 產生並由 Hub 常數時間比較。「開放房 vs 邀請房」仍在討論，傾向預設「共用憑證的邀請連結」以保留匿名。憑證與金鑰不得出現在任何 log。
+
 ## 開發慣例
 
 - **Commit message**：遵守 `.cursor/rules/git-commit.mdc`，格式 `<type>(scope): <summary>`，type 限 `feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert`，現在式、72 字元內、不加句點；常用 scope：`chat`、`ui`、`tauri`、`hotkey`、`server`、`readme`。一個 commit 只做一件事。
