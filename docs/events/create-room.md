@@ -1,268 +1,56 @@
-# 建立聊天室事件流
+# 建立聊天室
 
-## 概述
+描述使用者在首頁按下「建立聊天室」後，目前實際發生的事。
 
-本文檔詳細說明了用戶點擊「建立聊天室」按鈕後，系統中的完整事件流程。
-
-## 事件流程圖
+## 流程
 
 ```mermaid
 sequenceDiagram
-    participant UI as 前端 UI
-    participant React as React 組件
-    participant Tauri as Tauri 命令
-    participant Rust as Rust 後端
-    participant API as HTTP API
-    participant Clients as 所有客戶端
-
-    UI->>React: 點擊「建立聊天室」按鈕
-    React->>Tauri: invoke("create_room", { room_name })
-    Tauri->>Rust: 處理 create_room 命令
-    Rust-->>Tauri: 返回房間連結
-    Tauri-->>React: 返回房間資訊
-    React-->>UI: 顯示房間連結
-    Rust->>API: 廣播新房間建立事件
-    API-->>Clients: 發送房間更新事件
-    Clients-->>React: 接收房間更新事件
-    React-->>UI: 更新房間列表
+    participant UI as AppHome
+    participant Hook as useRoomCreation
+    participant Cmd as create_chatroom
+    participant UC as CreateRoomUsecase
+    participant Svc as ChatroomServiceImpl
+    participant Repo as ChatroomsRepository
+    UI->>Hook: 點擊「建立聊天室」
+    Hook->>Cmd: invoke('create_chatroom')
+    Cmd->>UC: create_room()
+    UC->>Svc: create_room()
+    Svc->>Svc: 產生 UUIDv7
+    Svc->>Repo: create_room(id)
+    Repo-->>Svc: ChatRoom { is_owner: true }
+    Svc-->>UC: ChatRoom
+    UC-->>Cmd: ChatRoom
+    Cmd-->>Hook: ChatRoom
+    Hook-->>UI: 顯示 room.id，toast「聊天室建立成功！」
 ```
 
-## 詳細流程
+## 各層對應檔案
 
-### 1. 前端觸發
+| 層 | 檔案 |
+|---|---|
+| UI | `src/pages/AppHome.tsx`、`src/components/landing/CreateRoomButton.tsx`、`RoomLinkDisplay.tsx` |
+| Hook | `src/hooks/useRoomCreation.ts` |
+| Command | `src-tauri/src/commands/chatroom/create.rs` |
+| Use case | `src-tauri/src/application/usecase/chatroom/create.rs`（實作 `CreateRoomPort`） |
+| Service | `src-tauri/src/application/service/chatroom.rs`（實作 `ChatroomService`） |
+| Repository | `src-tauri/src/application/repository/chatrooms.rs`（實作 `ChatroomRepository`，記憶體 `HashMap`） |
 
-```typescript
-// src/components/CreateRoomButton.tsx
-const CreateRoomButton = () => {
-  const handleCreateRoom = async () => {
-    try {
-      // 1. 獲取房間名稱
-      const roomName = await promptRoomName();
+依賴在 `src-tauri/src/init.rs` 組裝成 `AppState`，command 從 Tauri `State<AppState>` 取得 use case。
 
-      // 2. 調用 Tauri 命令並獲取房間資訊
-      const roomInfo = await invoke<RoomInfo>("create_room", {
-        room_name: roomName,
-      });
+## 進入聊天室之後
 
-      // 3. 顯示房間連結
-      setRoomLink(roomInfo.link);
-
-      // 4. 顯示成功提示
-      toast.success("聊天室建立成功！");
-    } catch (error) {
-      // 5. 錯誤處理
-      toast.error("建立聊天室失敗：" + error.message);
-    }
-  };
-
-  return <Button onClick={handleCreateRoom}>建立聊天室</Button>;
-};
-```
-
-### 2. Tauri 命令處理
-
-```rust
-// src-tauri/src/commands/room.rs
-#[derive(serde::Serialize)]
-pub struct RoomInfo {
-    pub id: String,
-    pub name: String,
-    pub link: String,
-}
-
-#[tauri::command]
-pub async fn create_room(
-    room_name: String,
-    state: State<'_, AppState>,
-) -> Result<RoomInfo, String> {
-    // 1. 驗證房間名稱
-    if room_name.is_empty() {
-        return Err("房間名稱不能為空".to_string());
-    }
-
-    // 2. 生成房間 ID
-    let room_id = generate_room_id();
-
-    // 3. 創建房間連結
-    let room_link = format!("gossip://chat/{}", room_id);
-
-    // 4. 創建新房間
-    let room = Room::new(room_name.clone(), room_id.clone());
-
-    // 5. 將房間添加到狀態中
-    state.rooms.lock().await.insert(room_id.clone(), room);
-
-    // 6. 廣播房間更新事件
-    state.broadcast_room_update().await?;
-
-    // 7. 返回房間資訊
-    Ok(RoomInfo {
-        id: room_id,
-        name: room_name,
-        link: room_link,
-    })
-}
-
-fn generate_room_id() -> String {
-    use rand::{thread_rng, Rng};
-    let mut rng = thread_rng();
-    let id: u64 = rng.gen();
-    base64::encode(id.to_string())
-        .chars()
-        .take(8)
-        .collect()
-}
-```
-
-### 3. 後端狀態管理
-
-```rust
-// src-tauri/src/state.rs
-pub struct AppState {
-    pub rooms: Arc<Mutex<HashMap<String, Room>>>,
-    pub tx: Sender<Message>,
-}
-
-impl AppState {
-    pub async fn broadcast_room_update(&self) -> Result<(), String> {
-        // 1. 獲取當前房間列表
-        let rooms = self.rooms.lock().await;
-        let room_list: Vec<RoomInfo> = rooms
-            .iter()
-            .map(|(id, room)| RoomInfo {
-                id: id.clone(),
-                name: room.name.clone(),
-                link: format!("gossip://chat/{}", id),
-            })
-            .collect();
-
-        // 2. 創建更新消息
-        let message = Message::RoomUpdate(room_list);
-
-        // 3. 發送消息
-        self.tx.send(message).map_err(|e| e.to_string())?;
-
-        Ok(())
-    }
-}
-```
-
-### 4. HTTP API 處理
-
-```rust
-// src-tauri/src/api.rs
-async fn handle_receive(
-    req: HttpRequest,
-    payload: web::Payload,
-    srv: web::Data<Addr<Server>>,
-) -> Result<HttpResponse, Error> {
-    // 1. 接收消息
-    let message = payload.to_str()?;
-
-    // 2. 解析消息類型
-    match message {
-        "ROOM_UPDATE" => {
-            // 3. 廣播房間更新事件
-            srv.send(BroadcastMessage {
-                message: message.to_string(),
-            })
-            .await?;
-        }
-        _ => return Ok(HttpResponse::BadRequest().finish()),
-    }
-
-    Ok(HttpResponse::Ok().finish())
-}
-```
-
-### 5. 前端事件處理
-
-```typescript
-// src/hooks/useRooms.ts
-interface RoomInfo {
-  id: string;
-  name: string;
-  link: string;
-}
-
-export const useRooms = () => {
-  const [rooms, setRooms] = useState<RoomInfo[]>([]);
-
-  useEffect(() => {
-    // 1. 監聽房間更新事件
-    const unlisten = listen("room-update", (event) => {
-      // 2. 更新房間列表
-      setRooms(event.payload as RoomInfo[]);
-    });
-
-    // 3. 清理監聽器
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, []);
-
-  return rooms;
-};
-```
+1. 使用者按「進入聊天室」，`RoomLinkDisplay` 導向 `/app/chat`，並帶 `{ isHost: true, roomLink }`。
+2. `ChatRoom` 頁面的 `useChatRoom` 開啟 `ws://127.0.0.1:9123/ws`，送出 `{ message_type: 'join', content: '創建了聊天室', sender: 'System' }`。
+3. 後續資料流見 [事件與通訊流程](../event-flow.md)：訊息不會回到任何 UI。
 
 ## 錯誤處理
 
-### 1. 前端錯誤
+- command 失敗時 `invoke` reject，`useRoomCreation` 顯示 toast「建立聊天室失敗：<錯誤字串>」，`roomLink` 維持空字串。
+- 目前唯一的錯誤來源是 repository 的 `"Chatroom already exists"`（id 重複）。
 
-- 房間名稱驗證
-- 網絡請求錯誤
-- 事件監聽錯誤
-- 房間連結生成錯誤
+## 與目標的差距
 
-### 2. 後端錯誤
-
-- 房間創建失敗
-- 狀態更新失敗
-- 廣播失敗
-- ID 生成衝突
-
-## 性能考慮
-
-1. **狀態管理**
-
-   - 使用 React 狀態管理房間列表
-   - 避免不必要的重渲染
-
-2. **事件處理**
-
-   - 使用防抖處理快速點擊
-   - 優化事件監聽器
-
-3. **資源管理**
-   - 及時清理事件監聽器
-   - 釋放未使用的資源
-
-## 安全性考慮
-
-1. **輸入驗證**
-
-   - 房間名稱格式驗證
-   - XSS 防護
-
-2. **權限控制**
-
-   - 房間創建權限
-   - 訪問控制
-
-3. **ID 生成**
-   - 使用加密安全的隨機數生成器
-   - 避免 ID 衝突
-
-## 最佳實踐
-
-1. **用戶體驗**
-
-   - 即時反饋
-   - 錯誤提示
-   - 加載狀態
-   - 房間連結複製功能
-
-2. **代碼組織**
-   - 模塊化設計
-   - 清晰的錯誤處理
-   - 可維護的狀態管理
+- 顯示的「連結」只是 UUID，沒有房主的 LAN IP、port 或驗證 token，其他人無法用它加入。
+- 建房不會啟動或設定任何對外的 Hub；WebSocket server 在 app 啟動時就開在 `127.0.0.1:9123`，與房間無關。
+- 測試：`useRoomCreation.test.ts`（前端，`mockIPC`）與 Rust 各層的 `#[cfg(test)]` 單元測試涵蓋這條流程。

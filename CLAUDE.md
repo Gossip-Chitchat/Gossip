@@ -84,6 +84,7 @@ init.rs               組裝依賴（DI）並產生 AppState
 main.rs               啟動 actix-web（tokio::spawn）+ Tauri，並用 mpsc 把 WS 訊息 emit 到前端
 ```
 
+- **這個分層是刻意保留的設計決策**（見 Notion Product Design 的架構決策紀錄）：不要為了「MVP 比較快」而合併或移除 port / usecase / service / repository 任何一層。新的網路功能（LAN Hub、之後可能的雲端中繼）也要以 port + adapter 的方式接進來。
 - 每層都用 `Arc<Mutex<dyn Trait>>` 注入；新增功能照同樣路徑：port → usecase → service → repository，最後在 `init.rs` 組裝、在 `AppState` 掛上、在 `main.rs` 的 `generate_handler!` 註冊 command。
 - `domain/models/events/mod.rs` 已定義 CloudEvents 1.0 格式的 `CloudEvent<T>`，這是預定的事件信封（新訊息、新成員加入、老闆警示），但**目前沒有任何地方使用**。
 - 訊息序列化：後端偏好 MessagePack（`rmp-serde`；前端 `@msgpack/msgpack`），也接受 JSON text 並轉成 msgpack。
@@ -108,11 +109,16 @@ ChatRoom UI ──JSON text──> ws://127.0.0.1:9123/ws ──> ChatWebSocket 
 5. **老闆警示只在本機**：不會廣播；快捷鍵寫死且只在視窗聚焦時有效（非 global shortcut）；設定頁的快捷鍵 / 主題 / 音效選項按「儲存」只會 `alert()`，沒有持久化。
 6. **成員是假資料**：`ChatRoom.tsx` 寫死 4 個使用者，送出者一律是 `'You'`，沒有暱稱機制。
 7. **Commands 多為 stub**：`get_chatroom`、`get_chatroom_list`、`delete_chatroom`、plugins 相關 command 回傳假值；`install_plugin` 未註冊。
-8. **文件漂移**：`docs/api/chatroom.md` 說 `create_chatroom` 接受 `name` / `description`，實際沒有參數，`ChatRoom` 也只有 `is_owner` / `id` / `created_at`；`docs/event-flow.md` 連到的 `overview.md`、`join-room.md` 等檔案不存在；`docs/events/create-room.md` 的範例程式碼與實作不同。
+8. **Commands 與實作的對照**：`docs/api/` 記錄目前註冊的 command 與它們是否為 stub，改 command 時要同步更新那張表。
 9. **安全面**：WS 沒有任何驗證、未加密（`ws://`）、`tauri.conf.json` 的 `csp` 為 `null`；房間 ID 用 UUIDv7（含時間戳，可部分推測），若要當作邀請憑證應改用高熵隨機 token。
 10. **發佈**：沒有 release workflow，Landing 的「Windows / macOS / Linux 下載」按鈕都只連到 GitHub repo 首頁。
 
-修這些問題時，以 Landing page 的功能描述與 Notion 規劃為準，並同步更新 `docs/`。
+修這些問題時，以 Landing page 的功能描述與 Notion 規劃為準。
+
+### 文件分工
+
+- `docs/`：只描述**目前程式碼實際的行為**（command、通訊管道、功能流程）。改了行為就要同步改 `docs/`，不要把還沒做的設計寫進去。
+- Notion 的 Gossip 頁面與其下的 Product Design 頁面：目標設計、設計取捨與決策紀錄。功能實作完成後，再把對應內容搬進 `docs/`。
 
 ## 開發慣例
 

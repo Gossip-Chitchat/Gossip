@@ -1,87 +1,51 @@
-# Gossip 事件流文檔
+# Gossip 事件與通訊流程
 
-## 概述
+本文件描述**目前程式碼實際的行為**。目標設計（WS Hub、廣播、CloudEvent 事件協定、邀請連結）還沒實作，記錄在 Notion 的 Gossip 頁面與 Product Design 頁面；實作後再搬進這裡。
 
-Gossip 使用事件驅動架構來處理消息傳遞和系統事件。本文檔提供了系統中所有事件流程的索引和概述。
+## 通訊管道
 
-## 文檔結構
+目前前後端之間有三條管道：
 
-### 1. 系統架構
+| 管道 | 方向 | 實作位置 | 狀態 |
+|---|---|---|---|
+| Tauri command（`invoke`） | 前端 → Rust | `src-tauri/src/commands/` | 見 [API 文件](./api/README.md) |
+| WebSocket `ws://127.0.0.1:9123/ws` | 前端 → Rust | `src-tauri/src/application/infrastructure/server/route.rs` | 只收不送 |
+| Tauri event `chat-message` | Rust → 前端 | `src-tauri/src/main.rs` | 有 emit，但前端沒有監聽 |
 
-- [系統事件流概述](./events/overview.md)
-  - 整體架構
-  - 通信方式
-  - 事件類型
+```mermaid
+flowchart LR
+    UI["ChatRoom<br>useChatRoom"] -->|"JSON text"| WS["actix WebSocket<br>127.0.0.1:9123/ws"]
+    WS -->|"MessagePack bytes"| CH["std::sync::mpsc"]
+    CH --> TH["背景 thread"]
+    TH -->|"emit chat-message"| FE["前端（無監聽者）"]
+```
 
-### 2. 功能事件流
+### WebSocket 訊息格式
+
+```typescript
+// 對應 route.rs 的 WsMessage
+interface WsMessage {
+  message_type: string; // 目前前端送 'join' 或 'chat'
+  content: string;
+  sender: string;       // 前端目前寫死為 'System' 或 'You'
+}
+```
+
+- 後端接受 MessagePack 二進位 frame；也接受 JSON text frame，並轉成 MessagePack。
+- 前端（`useChatRoom`）目前送的是 JSON text。
+- server 只綁 `127.0.0.1`，同一台電腦以外連不進來。
+- server 收到後**不會回送或廣播**給任何 WebSocket client，只把 MessagePack bytes 轉給本機視窗的 `chat-message` event。
+
+### 前端現有的監聽（都收不到東西）
+
+| 位置 | 監聽 | 為什麼收不到 |
+|---|---|---|
+| `useChatRoom` 的 `ws.onmessage` | WebSocket 回送 | server 從不回送 |
+| `useChatMessages` | Tauri event `chat-message-msgpack` | 後端 emit 的名稱是 `chat-message`；而且這個 hook 沒有被任何元件使用 |
+| `App.tsx` | Tauri event `receive-message` | 沒有任何地方 emit |
+
+## 功能流程
 
 - [建立聊天室](./events/create-room.md)
 
-  - 按鈕點擊事件
-  - 房間創建流程
-  - 狀態更新機制
-
-- [加入聊天室](./events/join-room.md)
-
-  - 房間選擇
-  - 加入流程
-  - 權限驗證
-
-- [發送消息](./events/send-message.md)
-  - 消息發送
-  - 廣播機制
-  - 接收處理
-
-### 3. 系統事件流
-
-- [應用啟動](./events/app-startup.md)
-
-  - 初始化流程
-  - 資源加載
-  - 狀態準備
-
-- [主題切換](./events/theme-switch.md)
-  - 主題變更
-  - 狀態同步
-  - UI 更新
-
-## 通用考慮
-
-### 1. 性能優化
-
-- 事件防抖
-- 資源管理
-- 狀態更新優化
-
-### 2. 錯誤處理
-
-- 錯誤捕獲
-- 錯誤恢復
-- 用戶提示
-
-### 3. 安全性
-
-- 輸入驗證
-- 權限控制
-- 數據安全
-
-## 開發指南
-
-### 1. 添加新事件
-
-1. 在對應目錄創建新文檔
-2. 更新主索引
-3. 實現相關代碼
-4. 添加測試用例
-
-### 2. 修改現有事件
-
-1. 更新對應文檔
-2. 確保向後兼容
-3. 更新相關測試
-
-### 3. 文檔維護
-
-1. 保持文檔最新
-2. 確保示例代碼可用
-3. 定期審查和更新
+加入聊天室、發送訊息、老闆警示目前都沒有跨機器的流程；它們在前端本機的行為記錄在 `CLAUDE.md` 的「已知問題」。

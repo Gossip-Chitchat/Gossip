@@ -1,83 +1,43 @@
-# Chatroom API
+# Chatroom Commands
 
-This document describes the available commands for managing chatrooms in the Gossip application.
+實作位於 `src-tauri/src/commands/chatroom/`。只有 `create_chatroom` 走完整的 usecase → service → repository 分層，其餘三個 command 目前是 stub。
 
-## Commands
-
-### get_chatroom_list
-
-Retrieves a list of all available chatrooms.
-
-**Command Name:** `get_chatroom_list`
-
-**Parameters:** None
-
-**Returns:** `Vec<ChatRoom>`
-
-**Example:**
-```typescript
-const chatrooms = await invoke('get_chatroom_list')
-```
-
-### get_chatroom
-
-Retrieves a specific chatroom by its ID.
-
-**Command Name:** `get_chatroom`
-
-**Parameters:**
-- `id` (string): The unique identifier of the chatroom
-
-**Returns:** `ChatRoom`
-
-**Example:**
-```typescript
-const chatroom = await invoke('get_chatroom', { id: 'chatroom-id' })
-```
-
-### create_chatroom
-
-Creates a new chatroom.
-
-**Command Name:** `create_chatroom`
-
-**Parameters:**
-- `name` (string): The name of the chatroom
-- `description` (string): The description of the chatroom
-
-**Returns:** `ChatRoom`
-
-**Example:**
-```typescript
-const newChatroom = await invoke('create_chatroom', {
-  name: 'My Chatroom',
-  description: 'A new chatroom'
-})
-```
-
-### delete_chatroom
-
-Deletes a chatroom by its ID.
-
-**Command Name:** `delete_chatroom`
-
-**Parameters:**
-- `id` (string): The unique identifier of the chatroom to delete
-
-**Returns:** `boolean` - Returns `true` if deletion was successful
-
-**Example:**
-```typescript
-const success = await invoke('delete_chatroom', { id: 'chatroom-id' })
-```
-
-## ChatRoom Type Definition
+## 型別
 
 ```typescript
+// 對應 src-tauri/src/domain/models/chat.rs
 interface ChatRoom {
-  id: string;
-  name: string;
-  description: string;
-  created_at: string;
+  is_owner: boolean;   // 是否為房主（本機建立的房間為 true）
+  id: string;          // UUIDv7 字串
+  created_at: string;  // RFC 3339 時間字串（chrono DateTime<Utc>）
 }
-``` 
+```
+
+## create_chatroom
+
+建立聊天室，存進本機記憶體（`ChatroomsRepository` 的 `HashMap`），不會寫入磁碟。
+
+- **參數**：無
+- **回傳**：`ChatRoom`，`is_owner` 為 `true`，`id` 為新產生的 UUIDv7
+- **錯誤**：`"Chatroom already exists"`（id 重複時；正常情況下不會發生）
+
+```typescript
+const room = await invoke<ChatRoom>('create_chatroom');
+```
+
+前端目前把 `room.id` 直接當作「聊天室連結」顯示（`src/hooks/useRoomCreation.ts`），它不含房主位址，其他電腦無法用它加入。
+
+## get_chatroom（stub）
+
+- **參數**：`id: string`
+- **回傳**：新建立的 `ChatRoom`，`id` 為傳入值、`is_owner` 為 `false`、`created_at` 為呼叫當下時間。**不會查詢 repository**。
+
+## get_chatroom_list（stub）
+
+- **參數**：無
+- **回傳**：永遠是空陣列 `[]`。
+
+## delete_chatroom（stub）
+
+- **參數**：`id: string`
+- **回傳**：永遠是 `true`，實際上不會刪除任何東西。

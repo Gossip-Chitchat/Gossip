@@ -1,17 +1,5 @@
-# Notification API
+# Notification Commands
 
-This document describes the available commands for managing notifications in the Gossip application.
+目前沒有任何通知相關的 command。`src-tauri/src/commands/notification/`、`application/usecase/notification/`、`application/service/notification/` 都是空模組，`domain/models/events/notification.rs` 只有一個尚未使用的 `Notification` struct。
 
-> **Note:** This API is currently under development. Commands will be added here as they are implemented.
-
-## Commands
-
-No commands are currently available for the notification system.
-
-## Future Additions
-
-The following features are planned for future implementation:
-- Send notifications
-- Manage notification preferences
-- Handle notification events
-- Notification history 
+老闆警示目前只在前端本機觸發（`src/hooks/useChatRoom.ts` 的 `triggerBossAlert`），不經過後端，也不會通知其他人。
