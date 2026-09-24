@@ -1,10 +1,10 @@
+use actix::prelude::*;
 use actix_web::{web, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
+use bytes::Bytes;
+use rmp_serde::{Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::Sender;
-use actix::prelude::*;
-use rmp_serde::{Deserializer, Serializer};
-use bytes::Bytes;
 
 // 定義 WebSocket 訊息結構
 #[derive(Debug, Serialize, Deserialize)]
@@ -34,23 +34,23 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatWebSocket {
                     Ok(ws_message) => {
                         let message: WsMessage = ws_message;
                         println!("WebSocket received MessagePack: {:?}", message);
-                        
+
                         // 直接將二進制數據轉發到 Tauri 主線程
                         if let Err(e) = self.tx.send(bin.to_vec()) {
                             eprintln!("Failed to send msgpack to Tauri thread: {}", e);
                         }
-                    },
+                    }
                     Err(e) => {
                         eprintln!("Failed to deserialize MessagePack: {}", e);
                     }
                 }
-            },
+            }
             Ok(ws::Message::Text(text)) => {
                 // 為了兼容性，仍然支持 JSON
                 println!("Warning: Received text message, but binary MessagePack is preferred");
                 if let Ok(ws_message) = serde_json::from_str::<WsMessage>(&text) {
                     println!("WebSocket received JSON: {:?}", ws_message);
-                    
+
                     // 將 JSON 轉換為 MessagePack
                     let mut buf = Vec::new();
                     if let Ok(_) = ws_message.serialize(&mut Serializer::new(&mut buf)) {
@@ -60,14 +60,14 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatWebSocket {
                         }
                     }
                 }
-            },
+            }
             Ok(ws::Message::Ping(msg)) => {
                 ctx.pong(&msg);
-            },
+            }
             Ok(ws::Message::Close(reason)) => {
                 ctx.close(reason);
                 ctx.stop();
-            },
+            }
             _ => (),
         }
     }

@@ -3,7 +3,7 @@ use crate::domain::models::chat::ChatRoom;
 pub mod create;
 
 /// Get a list of all chatrooms
-#[tauri::command]   
+#[tauri::command]
 pub fn get_chatroom_list() -> Result<Vec<ChatRoom>, String> {
     // TODO: Implement fetching chatrooms from a data source
     // For now, return an empty vector
@@ -17,11 +17,8 @@ pub fn get_chatroom(id: String) -> ChatRoom {
     chatroom
 }
 
-
-
 /// Delete a chatroom
 #[tauri::command]
 pub fn delete_chatroom(id: String) -> bool {
     true
 }
-

@@ -19,5 +19,3 @@ pub fn get_plugin_from_server(id: String) -> Plugin {
 pub fn install_plugin(id: String) -> bool {
     true
 }
-
-

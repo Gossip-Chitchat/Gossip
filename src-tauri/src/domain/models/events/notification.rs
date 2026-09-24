@@ -1,5 +1,3 @@
-
-
 pub struct Notification {
     pub id: String,
     pub title: String,

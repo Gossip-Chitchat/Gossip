@@ -5,13 +5,11 @@ mod commands;
 mod domain;
 mod init;
 
-use init::init_state;
-use application::infrastructure::server::route::ws_index;
 use actix_web::{web, App, HttpServer};
-use std::sync::mpsc::{self, Sender, Receiver};
+use application::infrastructure::server::route::ws_index;
+use init::init_state;
+use std::sync::mpsc::{self, Receiver, Sender};
 use tauri::{Emitter, Manager}; // for window access
-
-
 
 #[tokio::main]
 async fn main() {
@@ -35,7 +33,7 @@ async fn main() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let main_window = app.get_webview_window("main").unwrap();
-            
+
             #[cfg(debug_assertions)]
             {
                 // main_window.open_devtools();
@@ -47,8 +45,11 @@ async fn main() {
             // 接收 WebSocket 訊息並轉發到前端
             std::thread::spawn(move || {
                 while let Ok(msgpack_data) = rx.recv() {
-                    println!("Tauri 通過 channel 收到 MessagePack 數據，長度: {}", msgpack_data.len());
-                    
+                    println!(
+                        "Tauri 通過 channel 收到 MessagePack 數據，長度: {}",
+                        msgpack_data.len()
+                    );
+
                     // 直接將 MessagePack 二進制數據發送給前端，讓前端自行解析
                     let _ = main_window.emit("chat-message", msgpack_data);
                 }
